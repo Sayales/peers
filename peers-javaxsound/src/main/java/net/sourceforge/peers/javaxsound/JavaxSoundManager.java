@@ -19,6 +19,11 @@
 
 package net.sourceforge.peers.javaxsound;
 
+import net.sourceforge.peers.Logger;
+import net.sourceforge.peers.media.AbstractSoundManager;
+import net.sourceforge.peers.sip.Utils;
+
+import javax.sound.sampled.*;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -27,17 +32,7 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-
-import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.DataLine;
-import javax.sound.sampled.LineUnavailableException;
-import javax.sound.sampled.SourceDataLine;
-import javax.sound.sampled.TargetDataLine;
-
-import net.sourceforge.peers.Logger;
-import net.sourceforge.peers.media.AbstractSoundManager;
-import net.sourceforge.peers.sip.Utils;
+import java.util.Objects;
 
 public class JavaxSoundManager extends AbstractSoundManager {
 
@@ -52,8 +47,12 @@ public class JavaxSoundManager extends AbstractSoundManager {
     private boolean mediaDebug;
     private Logger logger;
     private String peersHome;
-    
+
     public JavaxSoundManager(boolean mediaDebug, Logger logger, String peersHome) {
+        this(mediaDebug, logger, peersHome, null);
+    }
+
+    public JavaxSoundManager(boolean mediaDebug, Logger logger, String peersHome, SoundConfig config) {
         this.mediaDebug = mediaDebug;
         this.logger = logger;
         this.peersHome = peersHome;
@@ -61,7 +60,7 @@ public class JavaxSoundManager extends AbstractSoundManager {
             this.peersHome = Utils.DEFAULT_PEERS_HOME;
         }
         // linear PCM 8kHz, 16 bits signed, mono-channel, little endian
-        audioFormat = new AudioFormat(8000, 16, 1, true, false);
+        audioFormat = createAudioFormat(config);
         targetInfo = new DataLine.Info(TargetDataLine.class, audioFormat);
         sourceInfo = new DataLine.Info(SourceDataLine.class, audioFormat);
         sourceDataLineMutex = new Object();
@@ -220,4 +219,12 @@ public class JavaxSoundManager extends AbstractSoundManager {
         return numberOfBytesWritten;
     }
 
+    private AudioFormat createAudioFormat(SoundConfig config) {
+        if (Objects.isNull(config))
+        {
+            return new AudioFormat(8000, 16, 1, true, false);
+        }
+        return new AudioFormat(config.getEncoding(),config.getSampleRate(), config.getSampleSizeInBits(),
+                config.getChannels(), config.getFrameSize(), config.getFrameRate(), config.getBigEndian());
+    }
 }
