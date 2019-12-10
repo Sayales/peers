@@ -23,8 +23,8 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 
-import net.sourceforge.peers.Config;
-import net.sourceforge.peers.JavaConfig;
+import net.sourceforge.peers.config.Config;
+import net.sourceforge.peers.config.JavaConfig;
 import net.sourceforge.peers.media.AbstractSoundManager;
 import net.sourceforge.peers.media.MediaMode;
 import net.sourceforge.peers.sip.Utils;

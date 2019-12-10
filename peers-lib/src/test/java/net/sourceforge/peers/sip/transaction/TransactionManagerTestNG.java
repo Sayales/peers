@@ -26,9 +26,9 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Random;
 
-import net.sourceforge.peers.Config;
+import net.sourceforge.peers.config.Config;
 import net.sourceforge.peers.FileLogger;
-import net.sourceforge.peers.JavaConfig;
+import net.sourceforge.peers.config.JavaConfig;
 import net.sourceforge.peers.Logger;
 import net.sourceforge.peers.sip.RFC3261;
 import net.sourceforge.peers.sip.syntaxencoding.SipParser;

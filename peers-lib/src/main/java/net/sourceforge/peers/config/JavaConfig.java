@@ -17,14 +17,16 @@
     Copyright 2012 Yohann Martineau 
 */
 
-package net.sourceforge.peers;
+package net.sourceforge.peers.config;
 
 import java.net.InetAddress;
 
+import net.sourceforge.peers.config.Config;
 import net.sourceforge.peers.media.MediaMode;
 import net.sourceforge.peers.sip.syntaxencoding.SipURI;
 
-public class JavaConfig implements Config {
+public class JavaConfig implements Config
+{
 
     private InetAddress localInetAddress;
     private InetAddress publicInetAddress;

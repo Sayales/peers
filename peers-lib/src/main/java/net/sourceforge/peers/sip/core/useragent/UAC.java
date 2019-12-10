@@ -19,6 +19,7 @@
 
 package net.sourceforge.peers.sip.core.useragent;
 
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -26,6 +27,7 @@ import java.util.List;
 import net.sourceforge.peers.Logger;
 import net.sourceforge.peers.sip.RFC3261;
 import net.sourceforge.peers.sip.Utils;
+import net.sourceforge.peers.sip.syntaxencoding.SipHeaderFieldMultiValue;
 import net.sourceforge.peers.sip.syntaxencoding.SipHeaderFieldName;
 import net.sourceforge.peers.sip.syntaxencoding.SipHeaderFieldValue;
 import net.sourceforge.peers.sip.syntaxencoding.SipHeaderParamName;
@@ -42,31 +44,41 @@ import net.sourceforge.peers.sip.transport.SipRequest;
 import net.sourceforge.peers.sip.transport.SipResponse;
 import net.sourceforge.peers.sip.transport.TransportManager;
 
-public class UAC {
-    
+
+public class UAC
+{
+
     private InitialRequestManager initialRequestManager;
+
     private MidDialogRequestManager midDialogRequestManager;
 
     private String registerCallID;
+
     private String profileUri;
-    
+
     //FIXME
     private UserAgent userAgent;
+
     private TransactionManager transactionManager;
+
     private DialogManager dialogManager;
+
     private List<String> guiClosedCallIds;
+
     private Logger logger;
-    
+
+
     /**
      * should be instanciated only once, it was a singleton.
      */
     public UAC(UserAgent userAgent,
-            InitialRequestManager initialRequestManager,
-            MidDialogRequestManager midDialogRequestManager,
-            DialogManager dialogManager,
-            TransactionManager transactionManager,
-            TransportManager transportManager,
-            Logger logger) {
+        InitialRequestManager initialRequestManager,
+        MidDialogRequestManager midDialogRequestManager,
+        DialogManager dialogManager,
+        TransactionManager transactionManager,
+        TransportManager transportManager,
+        Logger logger)
+    {
         this.userAgent = userAgent;
         this.initialRequestManager = initialRequestManager;
         this.midDialogRequestManager = midDialogRequestManager;
@@ -78,80 +90,114 @@ public class UAC {
             + userAgent.getUserpart() + RFC3261.AT + userAgent.getDomain();
     }
 
+
     /**
      * For the moment we consider that only one profile uri is used at a time.
-     * @throws SipUriSyntaxException 
+     *
+     * @throws SipUriSyntaxException
      */
-    SipRequest register() throws SipUriSyntaxException {
+    SipRequest register() throws SipUriSyntaxException
+    {
         String domain = userAgent.getDomain();
         String requestUri = RFC3261.SIP_SCHEME + RFC3261.SCHEME_SEPARATOR
             + domain;
         SipListener sipListener = userAgent.getSipListener();
         profileUri = RFC3261.SIP_SCHEME + RFC3261.SCHEME_SEPARATOR
-        	+ userAgent.getUserpart() + RFC3261.AT + domain;
+            + userAgent.getUserpart() + RFC3261.AT + domain;
         registerCallID = Utils.generateCallID(
-                userAgent.getConfig().getLocalInetAddress());
+            userAgent.getConfig().getLocalInetAddress());
+        MessageInterceptor registerInterceptor = (sipMessage) -> {
+            if (initialRequestManager.registerHandler.isUnregisterInvoked())
+            {
+                sipMessage.getSipHeaders().get(new SipHeaderFieldName(RFC3261.HDR_EXPIRES)).setValue("0");
+            }
+        };
         SipRequest sipRequest = initialRequestManager.createInitialRequest(
-                requestUri, RFC3261.METHOD_REGISTER, profileUri,
-                registerCallID);
-        if (sipListener != null) {
+            requestUri, RFC3261.METHOD_REGISTER, profileUri,
+            registerCallID, null, registerInterceptor);
+        if (sipListener != null)
+        {
             sipListener.registering(sipRequest);
         }
         return sipRequest;
     }
-    
-    void unregister() throws SipUriSyntaxException {
-        if (getInitialRequestManager().getRegisterHandler().isRegistered()) {
+
+
+    void unregister() throws SipUriSyntaxException
+    {
+        if (getInitialRequestManager().getRegisterHandler().isRegistered())
+        {
             String requestUri = RFC3261.SIP_SCHEME + RFC3261.SCHEME_SEPARATOR
                 + userAgent.getDomain();
-            MessageInterceptor messageInterceptor = new MessageInterceptor() {
-                
+            MessageInterceptor messageInterceptor = new MessageInterceptor()
+            {
+
                 @Override
-                public void postProcess(SipMessage sipMessage) {
+                public void postProcess(SipMessage sipMessage)
+                {
                     initialRequestManager.registerHandler.unregister();
                     SipHeaders sipHeaders = sipMessage.getSipHeaders();
                     SipHeaderFieldValue contact = sipHeaders.get(
-                            new SipHeaderFieldName(RFC3261.HDR_CONTACT));
+                        new SipHeaderFieldName(RFC3261.HDR_CONTACT));
                     contact.addParam(new SipHeaderParamName(RFC3261.PARAM_EXPIRES),
-                            "0");
+                        "0");
+                    sipHeaders.get(new SipHeaderFieldName(RFC3261.HDR_EXPIRES)).setValue("0");
+                    sipHeaders.add(new SipHeaderFieldName(RFC3261.USER_AGENT), new SipHeaderFieldValue("SIPPER for Odds"));
                 }
-                
+
             };
             // for any reason, asterisk requires a new Call-ID to unregister
             registerCallID = Utils.generateCallID(
-                    userAgent.getConfig().getLocalInetAddress());
+                userAgent.getConfig().getLocalInetAddress());
             initialRequestManager.createInitialRequest(requestUri,
-                    RFC3261.METHOD_REGISTER, profileUri, registerCallID, null,
-                    messageInterceptor);
+                RFC3261.METHOD_REGISTER, profileUri, registerCallID, null,
+                messageInterceptor);
         }
     }
-    
-    SipRequest invite(String requestUri, String callId)
-            throws SipUriSyntaxException {
-        return initialRequestManager.createInitialRequest(requestUri,
-                RFC3261.METHOD_INVITE, profileUri, callId);
-        
+
+    void bye() throws SipUriSyntaxException
+    {
+        String requestUri = RFC3261.SIP_SCHEME + RFC3261.SCHEME_SEPARATOR
+            + userAgent.getDomain();
+        registerCallID = Utils.generateCallID(
+            userAgent.getConfig().getLocalInetAddress());
+        initialRequestManager.createInitialRequest(requestUri,
+            RFC3261.METHOD_BYE, profileUri, registerCallID);
     }
 
-    private SipRequest getInviteWithAuth(String callId) {
+
+    SipRequest invite(String requestUri, String callId)
+        throws SipUriSyntaxException
+    {
+        return initialRequestManager.createInitialRequest(requestUri,
+            RFC3261.METHOD_INVITE, profileUri, callId);
+
+    }
+
+
+    private SipRequest getInviteWithAuth(String callId)
+    {
         List<ClientTransaction> clientTransactions =
             transactionManager.getClientTransactionsFromCallId(callId,
-                    RFC3261.METHOD_INVITE);
+                RFC3261.METHOD_INVITE);
         SipRequest sipRequestNoAuth = null;
-        for (ClientTransaction clientTransaction: clientTransactions) {
+        for (ClientTransaction clientTransaction : clientTransactions)
+        {
             InviteClientTransaction inviteClientTransaction =
-                (InviteClientTransaction)clientTransaction;
+                (InviteClientTransaction) clientTransaction;
             SipRequest sipRequest = inviteClientTransaction.getRequest();
             SipHeaders sipHeaders = sipRequest.getSipHeaders();
             SipHeaderFieldName authorization = new SipHeaderFieldName(
-                    RFC3261.HDR_AUTHORIZATION);
+                RFC3261.HDR_AUTHORIZATION);
             SipHeaderFieldValue value = sipHeaders.get(authorization);
-            if (value == null) {
+            if (value == null)
+            {
                 SipHeaderFieldName proxyAuthorization = new SipHeaderFieldName(
-                        RFC3261.HDR_PROXY_AUTHORIZATION);
+                    RFC3261.HDR_PROXY_AUTHORIZATION);
                 value = sipHeaders.get(proxyAuthorization);
             }
-            if (value != null) {
+            if (value != null)
+            {
                 return sipRequest;
             }
             sipRequestNoAuth = sipRequest;
@@ -159,57 +205,78 @@ public class UAC {
         return sipRequestNoAuth;
     }
 
-    void terminate(SipRequest sipRequest) {
+
+    void terminate(SipRequest sipRequest)
+    {
         String callId = Utils.getMessageCallId(sipRequest);
-        if (!guiClosedCallIds.contains(callId)) {
+        if (!guiClosedCallIds.contains(callId))
+        {
             guiClosedCallIds.add(callId);
         }
         Dialog dialog = dialogManager.getDialog(callId);
         SipRequest inviteWithAuth = getInviteWithAuth(callId);
-        if (dialog != null) {
+        if (dialog != null)
+        {
             SipRequest originatingRequest;
-            if (inviteWithAuth != null) {
+            if (inviteWithAuth != null)
+            {
                 originatingRequest = inviteWithAuth;
-            } else {
+            }
+            else
+            {
                 originatingRequest = sipRequest;
             }
             ClientTransaction clientTransaction =
                 transactionManager.getClientTransaction(originatingRequest);
-            if (clientTransaction != null) {
-                synchronized (clientTransaction) {
+            if (clientTransaction != null)
+            {
+                synchronized (clientTransaction)
+                {
                     DialogState dialogState = dialog.getState();
-                    if (dialog.EARLY.equals(dialogState)) {
+                    if (dialog.EARLY.equals(dialogState))
+                    {
                         initialRequestManager.createCancel(inviteWithAuth,
-                                midDialogRequestManager, profileUri);
-                    } else if (dialog.CONFIRMED.equals(dialogState)) {
+                            midDialogRequestManager, profileUri);
+                    }
+                    else if (dialog.CONFIRMED.equals(dialogState))
+                    {
                         // clientTransaction not yet removed
                         midDialogRequestManager.generateMidDialogRequest(
-                                dialog, RFC3261.METHOD_BYE, null);
+                            dialog, RFC3261.METHOD_BYE, null);
                         guiClosedCallIds.remove(callId);
                     }
                 }
-            } else {
+            }
+            else
+            {
                 // clientTransaction Terminated and removed
                 logger.debug("clientTransaction null");
                 midDialogRequestManager.generateMidDialogRequest(
-                        dialog, RFC3261.METHOD_BYE, null);
+                    dialog, RFC3261.METHOD_BYE, null);
                 guiClosedCallIds.remove(callId);
             }
-        } else {
+        }
+        else
+        {
             InviteClientTransaction inviteClientTransaction =
-                (InviteClientTransaction)transactionManager
+                (InviteClientTransaction) transactionManager
                     .getClientTransaction(inviteWithAuth);
-            if (inviteClientTransaction == null) {
+            if (inviteClientTransaction == null)
+            {
                 logger.error("cannot find invite client transaction" +
-                        " for call " + callId);
-            } else {
+                    " for call " + callId);
+            }
+            else
+            {
                 SipResponse sipResponse =
                     inviteClientTransaction.getLastResponse();
-                if (sipResponse != null) {
+                if (sipResponse != null)
+                {
                     int statusCode = sipResponse.getStatusCode();
-                    if (statusCode < RFC3261.CODE_200_OK) {
+                    if (statusCode < RFC3261.CODE_200_OK)
+                    {
                         initialRequestManager.createCancel(inviteWithAuth,
-                                midDialogRequestManager, profileUri);
+                            midDialogRequestManager, profileUri);
                     }
                 }
             }
@@ -217,11 +284,15 @@ public class UAC {
         userAgent.getMediaManager().stopSession();
     }
 
-    public InitialRequestManager getInitialRequestManager() {
+
+    public InitialRequestManager getInitialRequestManager()
+    {
         return initialRequestManager;
     }
 
-    public List<String> getGuiClosedCallIds() {
+
+    public List<String> getGuiClosedCallIds()
+    {
         return guiClosedCallIds;
     }
 

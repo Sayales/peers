@@ -25,7 +25,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 import java.util.UUID;
-import net.sourceforge.peers.Config;
+import net.sourceforge.peers.config.Config;
 import net.sourceforge.peers.Logger;
 import net.sourceforge.peers.sip.RFC2617;
 import net.sourceforge.peers.sip.RFC3261;

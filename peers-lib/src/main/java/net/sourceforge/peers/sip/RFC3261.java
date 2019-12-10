@@ -24,7 +24,8 @@ public final class RFC3261 {
     //SYNTAX ENCODING
     
       //HEADERS
-    
+    public static final String USER_AGENT = "User-Agent";
+
         //Methods
     
     public static final String METHOD_INVITE   = "INVITE";
@@ -33,6 +34,12 @@ public final class RFC3261 {
     public static final String METHOD_BYE      = "BYE";
     public static final String METHOD_OPTIONS  = "OPTIONS";
     public static final String METHOD_CANCEL   = "CANCEL";
+    public static final String METHOD_INFO   = "INFO";
+    public static final String METHOD_MESSAGE = "MESSAGE";
+    public static final String METHOD_NOTIFY = "NOTIFY";
+    public static final String METHOD_REFER = "REFER";
+    public static final String METHOD_UPDATE = "UPDATE";
+    public static final String METHOD_PRACK = "PRACK";
     
         //Classical form
     

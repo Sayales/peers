@@ -27,7 +27,7 @@ import java.net.SocketException;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
-import net.sourceforge.peers.Config;
+import net.sourceforge.peers.config.Config;
 import net.sourceforge.peers.Logger;
 import net.sourceforge.peers.sip.RFC3261;
 

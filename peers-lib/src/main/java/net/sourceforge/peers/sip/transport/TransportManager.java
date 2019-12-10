@@ -43,7 +43,7 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Hashtable;
 
-import net.sourceforge.peers.Config;
+import net.sourceforge.peers.config.Config;
 import net.sourceforge.peers.Logger;
 import net.sourceforge.peers.sip.RFC3261;
 import net.sourceforge.peers.sip.Utils;

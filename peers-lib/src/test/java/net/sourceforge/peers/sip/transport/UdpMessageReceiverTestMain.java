@@ -22,9 +22,9 @@ package net.sourceforge.peers.sip.transport;
 import java.io.IOException;
 import java.net.InetAddress;
 
-import net.sourceforge.peers.Config;
+import net.sourceforge.peers.config.Config;
 import net.sourceforge.peers.FileLogger;
-import net.sourceforge.peers.JavaConfig;
+import net.sourceforge.peers.config.JavaConfig;
 import net.sourceforge.peers.sip.RFC3261;
 
 

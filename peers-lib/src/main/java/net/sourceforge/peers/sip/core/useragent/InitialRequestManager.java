@@ -19,6 +19,7 @@
 
 package net.sourceforge.peers.sip.core.useragent;
 
+
 import net.sourceforge.peers.Logger;
 import net.sourceforge.peers.sip.RFC3261;
 import net.sourceforge.peers.sip.Utils;
@@ -28,6 +29,7 @@ import net.sourceforge.peers.sip.core.useragent.handlers.InviteHandler;
 import net.sourceforge.peers.sip.core.useragent.handlers.OptionsHandler;
 import net.sourceforge.peers.sip.core.useragent.handlers.RegisterHandler;
 import net.sourceforge.peers.sip.syntaxencoding.NameAddress;
+import net.sourceforge.peers.sip.syntaxencoding.SipHeaderFieldMultiValue;
 import net.sourceforge.peers.sip.syntaxencoding.SipHeaderFieldName;
 import net.sourceforge.peers.sip.syntaxencoding.SipHeaderFieldValue;
 import net.sourceforge.peers.sip.syntaxencoding.SipHeaderParamName;
@@ -43,219 +45,260 @@ import net.sourceforge.peers.sip.transport.SipRequest;
 import net.sourceforge.peers.sip.transport.SipResponse;
 import net.sourceforge.peers.sip.transport.TransportManager;
 
+
 public class InitialRequestManager extends RequestManager
-        implements ServerTransactionUser {
+    implements ServerTransactionUser
+{
 
     public InitialRequestManager(UserAgent userAgent,
-            InviteHandler inviteHandler,
-            CancelHandler cancelHandler,
-            ByeHandler byeHandler,
-            OptionsHandler optionsHandler,
-            RegisterHandler registerHandler,
-            DialogManager dialogManager,
-            TransactionManager transactionManager,
-            TransportManager transportManager,
-            Logger logger) {
+        InviteHandler inviteHandler,
+        CancelHandler cancelHandler,
+        ByeHandler byeHandler,
+        OptionsHandler optionsHandler,
+        RegisterHandler registerHandler,
+        DialogManager dialogManager,
+        TransactionManager transactionManager,
+        TransportManager transportManager,
+        Logger logger)
+    {
         super(userAgent,
-                inviteHandler,
-                cancelHandler,
-                byeHandler,
-                optionsHandler,
-                registerHandler,
-                dialogManager,
-                transactionManager,
-                transportManager,
-                logger);
+            inviteHandler,
+            cancelHandler,
+            byeHandler,
+            optionsHandler,
+            registerHandler,
+            dialogManager,
+            transactionManager,
+            transportManager,
+            logger);
         registerHandler.setInitialRequestManager(this);
     }
 
+
     /**
      * gives a new request outside of a dialog
-     * 
+     *
      * @param requestUri
      * @param method
      * @return
-     * @throws SipUriSyntaxException 
+     * @throws SipUriSyntaxException
      */
     public SipRequest getGenericRequest(String requestUri, String method,
-            String profileUri, String callId, String fromTag)
-            throws SipUriSyntaxException {
+        String profileUri, String callId, String fromTag)
+        throws SipUriSyntaxException
+    {
         //8.1.1
         SipRequest request = new SipRequest(method, new SipURI(requestUri));
         SipHeaders headers = request.getSipHeaders();
         //String hostAddress = utils.getMyAddress().getHostAddress();
-        
+
         //Via
-        
+
         //TODO no Via should be added directly by UAC, Via is normally added by Transaction layer
-        
-//        StringBuffer viaBuf = new StringBuffer();
-//        viaBuf.append(RFC3261.DEFAULT_SIP_VERSION);
-//        // TODO choose real transport
-//        viaBuf.append("/UDP ");
-//        viaBuf.append(hostAddress);
-//        SipHeaderFieldValue via = new SipHeaderFieldValue(viaBuf.toString());
-//        via.addParam(new SipHeaderParamName(RFC3261.PARAM_BRANCHID),
-//                utils.generateBranchId());
-//        headers.add(new SipHeaderFieldName(RFC3261.HDR_VIA), via);
-        
+
+        //        StringBuffer viaBuf = new StringBuffer();
+        //        viaBuf.append(RFC3261.DEFAULT_SIP_VERSION);
+        //        // TODO choose real transport
+        //        viaBuf.append("/UDP ");
+        //        viaBuf.append(hostAddress);
+        //        SipHeaderFieldValue via = new SipHeaderFieldValue(viaBuf.toString());
+        //        via.addParam(new SipHeaderParamName(RFC3261.PARAM_BRANCHID),
+        //                utils.generateBranchId());
+        //        headers.add(new SipHeaderFieldName(RFC3261.HDR_VIA), via);
+
         Utils.addCommonHeaders(headers);
-        
+
         //To
-        
+
         NameAddress to = new NameAddress(requestUri);
         headers.add(new SipHeaderFieldName(RFC3261.HDR_TO),
-                new SipHeaderFieldValue(to.toString()));
-        
+            new SipHeaderFieldValue(to.toString()));
+
         //From
-        
+
         NameAddress fromNA = new NameAddress(profileUri);
         SipHeaderFieldValue from = new SipHeaderFieldValue(fromNA.toString());
         String localFromTag;
-        if (fromTag != null) {
+        if (fromTag != null)
+        {
             localFromTag = fromTag;
-        } else {
+        }
+        else
+        {
             localFromTag = Utils.generateTag();
         }
         from.addParam(new SipHeaderParamName(RFC3261.PARAM_TAG), localFromTag);
         headers.add(new SipHeaderFieldName(RFC3261.HDR_FROM), from);
-        
+
         //Call-ID
-        
+
         SipHeaderFieldName callIdName =
             new SipHeaderFieldName(RFC3261.HDR_CALLID);
         String localCallId;
-        if (callId != null) {
+        if (callId != null)
+        {
             localCallId = callId;
-        } else {
+        }
+        else
+        {
             localCallId = Utils.generateCallID(
-                    userAgent.getConfig().getLocalInetAddress());
+                userAgent.getConfig().getLocalInetAddress());
         }
         headers.add(callIdName, new SipHeaderFieldValue(localCallId));
-        
+
         //CSeq
-        
+
         headers.add(new SipHeaderFieldName(RFC3261.HDR_CSEQ),
-                new SipHeaderFieldValue(userAgent.generateCSeq(method)));
-        
+            new SipHeaderFieldValue(userAgent.generateCSeq(method)));
+
         return request;
     }
- 
+
+
     public SipRequest createInitialRequest(String requestUri, String method,
-            String profileUri) throws SipUriSyntaxException {
+        String profileUri) throws SipUriSyntaxException
+    {
         return createInitialRequest(requestUri, method, profileUri, null);
     }
-    
+
+
     public SipRequest createInitialRequest(String requestUri, String method,
-            String profileUri, String callId) throws SipUriSyntaxException {
-        
+        String profileUri, String callId) throws SipUriSyntaxException
+    {
+
         return createInitialRequest(requestUri, method, profileUri, callId,
-                null, null);
+            null, null);
     }
-    
+
+
     public SipRequest createInitialRequest(String requestUri, String method,
-            String profileUri, String callId, String fromTag,
-            MessageInterceptor messageInterceptor)
-                throws SipUriSyntaxException {
-        
+        String profileUri, String callId, String fromTag,
+        MessageInterceptor messageInterceptor)
+        throws SipUriSyntaxException
+    {
+
         SipRequest sipRequest = getGenericRequest(requestUri, method,
-                profileUri, callId, fromTag);
-        
+            profileUri, callId, fromTag);
+
         // TODO add route header for outbound proxy give it to xxxHandler to create
         // clientTransaction
         SipURI outboundProxy = userAgent.getOutboundProxy();
-        if (outboundProxy != null) {
+        if (outboundProxy != null)
+        {
             NameAddress outboundProxyNameAddress =
                 new NameAddress(outboundProxy.toString());
             sipRequest.getSipHeaders().add(new SipHeaderFieldName(RFC3261.HDR_ROUTE),
-                    new SipHeaderFieldValue(outboundProxyNameAddress.toString()), 0);
+                new SipHeaderFieldValue(outboundProxyNameAddress.toString()), 0);
         }
         ClientTransaction clientTransaction = null;
-        if (RFC3261.METHOD_INVITE.equals(method)) {
+        if (RFC3261.METHOD_INVITE.equals(method))
+        {
             clientTransaction = inviteHandler.preProcessInvite(sipRequest);
-        } else if (RFC3261.METHOD_REGISTER.equals(method)) {
+        }
+        else if (RFC3261.METHOD_REGISTER.equals(method))
+        {
             clientTransaction = registerHandler.preProcessRegister(sipRequest);
         }
+        sipRequest.getSipHeaders().add(new SipHeaderFieldName(RFC3261.HDR_ALLOW), SipHeaderFieldMultiValue
+            .ofStrings(ConfigManager.getInstance().getSipRequestsHeaderConfig().getAllowedMethods()));
+        sipRequest.getSipHeaders().add(new SipHeaderFieldName(RFC3261.USER_AGENT),
+            new SipHeaderFieldValue(ConfigManager.getInstance().getSipRequestsHeaderConfig().getUserAgent()));
+        sipRequest.getSipHeaders().add(new SipHeaderFieldName(RFC3261.HDR_SUPPORTED),
+            SipHeaderFieldMultiValue.ofStrings(ConfigManager.getInstance().getSipRequestsHeaderConfig().getSupported()));
         createInitialRequestEnd(sipRequest, clientTransaction, profileUri,
-                messageInterceptor, true);
+            messageInterceptor, true);
         return sipRequest;
     }
-    
+
+
     private void createInitialRequestEnd(SipRequest sipRequest,
-            ClientTransaction clientTransaction, String profileUri,
-            MessageInterceptor messageInterceptor, boolean addContact) {
-    	if (clientTransaction == null) {
-    		logger.error("method not supported");
-    		return;
-    	}
-    	if (addContact) {
-    	    addContact(sipRequest, clientTransaction.getContact(), profileUri);
-    	}
-        if (messageInterceptor != null) {
+        ClientTransaction clientTransaction, String profileUri,
+        MessageInterceptor messageInterceptor, boolean addContact)
+    {
+        if (clientTransaction == null)
+        {
+            logger.error("method not supported");
+            return;
+        }
+        if (addContact)
+        {
+            addContact(sipRequest, clientTransaction.getContact(), profileUri);
+        }
+        if (messageInterceptor != null)
+        {
             messageInterceptor.postProcess(sipRequest);
         }
         // TODO create message receiver on client transport port
         clientTransaction.start();
     }
-    
+
+
     public void createCancel(SipRequest inviteRequest,
-            MidDialogRequestManager midDialogRequestManager, String profileUri) {
+        MidDialogRequestManager midDialogRequestManager, String profileUri)
+    {
         SipHeaders inviteHeaders = inviteRequest.getSipHeaders();
         SipHeaderFieldValue callId = inviteHeaders.get(
-                new SipHeaderFieldName(RFC3261.HDR_CALLID));
+            new SipHeaderFieldName(RFC3261.HDR_CALLID));
         SipRequest sipRequest;
-        try {
+        try
+        {
             sipRequest = getGenericRequest(
-                    inviteRequest.getRequestUri().toString(), RFC3261.METHOD_CANCEL,
-                    profileUri, callId.getValue(), null);
-        } catch (SipUriSyntaxException e) {
+                inviteRequest.getRequestUri().toString(), RFC3261.METHOD_CANCEL,
+                profileUri, callId.getValue(), null);
+        }
+        catch (SipUriSyntaxException e)
+        {
             logger.error("syntax error", e);
             return;
         }
-        
+
         ClientTransaction clientTransaction = null;
-            clientTransaction = cancelHandler.preProcessCancel(sipRequest,
-                    inviteRequest, midDialogRequestManager);
-        if (clientTransaction != null) {
+        clientTransaction = cancelHandler.preProcessCancel(sipRequest,
+            inviteRequest, midDialogRequestManager);
+        if (clientTransaction != null)
+        {
             createInitialRequestEnd(sipRequest, clientTransaction, profileUri,
-                    null, false);
+                null, false);
         }
-        
-        
+
     }
 
-    public void manageInitialRequest(SipRequest sipRequest) {
+
+    public void manageInitialRequest(SipRequest sipRequest)
+    {
         SipHeaders headers = sipRequest.getSipHeaders();
-        
+
         // TODO authentication
-        
+
         //method inspection
         SipResponse sipResponse = null;
-        if (!UAS.SUPPORTED_METHODS.contains(sipRequest.getMethod())) {
+        if (!UAS.SUPPORTED_METHODS.contains(sipRequest.getMethod()))
+        {
             //TODO generate 405 (using 8.2.6 &) with Allow header
             //(20.5) and send it
             sipResponse = generateResponse(sipRequest, null,
-                    RFC3261.CODE_405_METHOD_NOT_ALLOWED,
-                    RFC3261.REASON_405_METHOD_NOT_ALLOWED);
+                RFC3261.CODE_405_METHOD_NOT_ALLOWED,
+                RFC3261.REASON_405_METHOD_NOT_ALLOWED);
             SipHeaders sipHeaders = sipResponse.getSipHeaders();
             sipHeaders.add(new SipHeaderFieldName(RFC3261.HDR_ALLOW),
-                    new SipHeaderFieldValue(Utils.generateAllowHeader()));
+                new SipHeaderFieldValue(Utils.generateAllowHeader()));
         }
 
-        
         SipHeaderFieldValue contentType =
             headers.get(new SipHeaderFieldName(RFC3261.HDR_CONTENT_TYPE));
-        if (contentType != null) {
-            if (!RFC3261.CONTENT_TYPE_SDP.equals(contentType.getValue())) {
+        if (contentType != null)
+        {
+            if (!RFC3261.CONTENT_TYPE_SDP.equals(contentType.getValue()))
+            {
                 //TODO generate 415 with a Accept header listing supported content types
                 //8.2.3
             }
         }
 
-        
         //etc.
-        
-        if (sipResponse != null) {
+
+        if (sipResponse != null)
+        {
             ServerTransaction serverTransaction =
                 transactionManager.createServerTransaction(
                     sipResponse, userAgent.getSipPort(), RFC3261.TRANSPORT_UDP,
@@ -264,26 +307,31 @@ public class InitialRequestManager extends RequestManager
             serverTransaction.receivedRequest(sipRequest);
             serverTransaction.sendReponse(sipResponse);
         }
-        
+
         //TODO create server transaction
         String method = sipRequest.getMethod();
-        if (RFC3261.METHOD_INVITE.equals(method)) {
+        if (RFC3261.METHOD_INVITE.equals(method))
+        {
             inviteHandler.handleInitialInvite(sipRequest);
-        } else if (RFC3261.METHOD_CANCEL.equals(method)) {
+        }
+        else if (RFC3261.METHOD_CANCEL.equals(method))
+        {
             cancelHandler.handleCancel(sipRequest);
-        } else if (RFC3261.METHOD_OPTIONS.equals(method)) {
+        }
+        else if (RFC3261.METHOD_OPTIONS.equals(method))
+        {
             optionsHandler.handleOptions(sipRequest);
         }
     }
 
+
     public void addContact(SipRequest sipRequest, String contactEnd,
-            String profileUri) {
+        String profileUri)
+    {
         SipHeaders sipHeaders = sipRequest.getSipHeaders();
-        
-        
-        
+
         //Contact
-        
+
         StringBuffer contactBuf = new StringBuffer();
         contactBuf.append(RFC3261.SIP_SCHEME);
         contactBuf.append(RFC3261.SCHEME_SEPARATOR);
@@ -296,17 +344,19 @@ public class InitialRequestManager extends RequestManager
         SipHeaderFieldValue contact =
             new SipHeaderFieldValue(contactNA.toString());
         sipHeaders.add(new SipHeaderFieldName(RFC3261.HDR_CONTACT),
-                new SipHeaderFieldValue(contact.toString()));
+            new SipHeaderFieldValue(contact.toString()));
     }
 
     ///////////////////////////////////////////////////////////
     // ServerTransactionUser methods
     ///////////////////////////////////////////////////////////
 
+
     @Override
-    public void transactionFailure() {
+    public void transactionFailure()
+    {
         // TODO Auto-generated method stub
-        
+
     }
 
 }

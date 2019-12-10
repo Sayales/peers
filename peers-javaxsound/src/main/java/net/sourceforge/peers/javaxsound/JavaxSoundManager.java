@@ -33,6 +33,10 @@ import java.security.PrivilegedAction;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
 
 public class JavaxSoundManager extends AbstractSoundManager {
 
@@ -47,6 +51,11 @@ public class JavaxSoundManager extends AbstractSoundManager {
     private boolean mediaDebug;
     private Logger logger;
     private String peersHome;
+
+    private final Lock soundLock = new ReentrantLock();
+
+    private final AtomicBoolean isClosing = new AtomicBoolean(false);
+
 
     public JavaxSoundManager(boolean mediaDebug, Logger logger, String peersHome) {
         this(mediaDebug, logger, peersHome, null);
@@ -129,35 +138,48 @@ public class JavaxSoundManager extends AbstractSoundManager {
     }
 
     @Override
-    public synchronized void close() {
-        logger.debug("closeLines");
-        if (microphoneOutput != null) {
-            try {
-                microphoneOutput.close();
-            } catch (IOException e) {
-                logger.error("cannot close file", e);
-            }
-            microphoneOutput = null;
-        }
-        if (speakerInput != null) {
-            try {
-                speakerInput.close();
-            } catch (IOException e) {
-                logger.error("cannot close file", e);
-            }
-            speakerInput = null;
-        }
-        // AccessController.doPrivileged added for plugin compatibility
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
+    public void close() {
 
-            @Override
-            public Void run() {
-                if (targetDataLine != null) {
+        isClosing.set(true);
+        soundLock.lock();
+        try
+        {
+            logger.debug("closeLines");
+            if (microphoneOutput != null)
+            {
+                try
+                {
+                    microphoneOutput.close();
+                }
+                catch (IOException e)
+                {
+                    logger.error("cannot close file", e);
+                }
+                microphoneOutput = null;
+            }
+            if (speakerInput != null)
+            {
+                try
+                {
+                    speakerInput.close();
+                }
+                catch (IOException e)
+                {
+                    logger.error("cannot close file", e);
+                }
+                speakerInput = null;
+            }
+            // AccessController.doPrivileged added for plugin compatibility
+            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                if (targetDataLine != null)
+                {
                     targetDataLine.close();
                     targetDataLine = null;
                 }
-                synchronized (sourceDataLineMutex) {
-                    if (sourceDataLine != null) {
+                synchronized (sourceDataLineMutex)
+                {
+                    if (sourceDataLine != null)
+                    {
                         sourceDataLine.drain();
                         sourceDataLine.stop();
                         sourceDataLine.close();
@@ -165,38 +187,62 @@ public class JavaxSoundManager extends AbstractSoundManager {
                     }
                 }
                 return null;
-            }
-        });
+            });
+        }
+        finally
+        {
+            isClosing.set(false);
+            soundLock.unlock();
+        }
     }
 
     @Override
-    public synchronized byte[] readData() {
-        if (targetDataLine == null) {
-            return null;
-        }
-        int ready = targetDataLine.available();
-        while (ready == 0) {
-            try {
-                Thread.sleep(2);
-                ready = targetDataLine.available();
-            } catch (InterruptedException e) {
+    public  byte[] readData() {
+
+        soundLock.lock();
+        try
+        {
+            if (targetDataLine == null)
+            {
                 return null;
             }
-        }
-        if (ready <= 0) {
-            return null;
-        }
-        byte[] buffer = new byte[ready];
-        targetDataLine.read(buffer, 0, buffer.length);
-        if (mediaDebug) {
-            try {
-                microphoneOutput.write(buffer, 0, buffer.length);
-            } catch (IOException e) {
-                logger.error("cannot write to file", e);
+            int ready = targetDataLine.available();
+            while (ready == 0 && !isClosing.get())
+            {
+                try
+                {
+                    Thread.sleep(2);
+                    ready = targetDataLine.available();
+                }
+                catch (InterruptedException e)
+                {
+                    return null;
+                }
+            }
+            if (ready <= 0)
+            {
                 return null;
             }
+            byte[] buffer = new byte[ready];
+            targetDataLine.read(buffer, 0, buffer.length);
+            if (mediaDebug)
+            {
+                try
+                {
+                    microphoneOutput.write(buffer, 0, buffer.length);
+                }
+                catch (IOException e)
+                {
+                    logger.error("cannot write to file", e);
+                    return null;
+                }
+            }
+            return buffer;
         }
-        return buffer;
+        finally
+        {
+            soundLock.unlock();
+        }
     }
 
     @Override

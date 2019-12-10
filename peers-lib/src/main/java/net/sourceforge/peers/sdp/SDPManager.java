@@ -26,7 +26,7 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Random;
 
-import net.sourceforge.peers.Config;
+import net.sourceforge.peers.config.Config;
 import net.sourceforge.peers.Logger;
 import net.sourceforge.peers.rtp.RFC3551;
 import net.sourceforge.peers.rtp.RFC4733;

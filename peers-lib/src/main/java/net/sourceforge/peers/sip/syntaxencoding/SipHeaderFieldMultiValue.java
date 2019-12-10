@@ -20,6 +20,9 @@
 package net.sourceforge.peers.sip.syntaxencoding;
 
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 
 public class SipHeaderFieldMultiValue extends SipHeaderFieldValue {
 
@@ -31,6 +34,10 @@ public class SipHeaderFieldMultiValue extends SipHeaderFieldValue {
         }
         String arrToString = list.toString();
         return arrToString.substring(1, arrToString.length() - 1);
+    }
+    public static SipHeaderFieldMultiValue ofStrings(List<String> values)
+    {
+        return new SipHeaderFieldMultiValue(values.stream().map(SipHeaderFieldValue::new).collect(Collectors.toList()));
     }
     
     public SipHeaderFieldMultiValue(List<SipHeaderFieldValue> values) {
